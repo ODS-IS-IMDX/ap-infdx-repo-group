@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- © 2025 NTT DATA Japan Co., Ltd. & NTT InfraNet All Rights Reserved. -->
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.spatialid.app.api.domain.repository.ApiGroupsRepository">
+
+	<resultMap id="getDataResultMap" type="com.spatialid.app.api.domain.entity.ApiGroupsEntity">
+		<result property="servicerGroupId" column="servicer_group_id"/>
+		<result property="servicerGroupName" column="servicer_group_name"/>
+		<result property="servicerId" column="servicer_id"/>
+		<result property="overview" column="overview"/>
+	</resultMap>
+	<select id="getData" resultMap="getDataResultMap">
+		select
+			tbl1.servicer_group_id
+		,	tbl1.servicer_group_name
+		,	tbl1.servicer_id
+		,	tbl1.overview
+		from
+			api_user_group tbl1
+		<where>
+			<trim prefix="(" suffix=")" prefixOverrides="AND">
+				<if test="servicerId != null and servicerId != ''">
+					tbl1.servicer_id = #{servicerId}
+				</if>
+				<if test="servicerGroupId != null and servicerGroupId != ''">
+					and tbl1.servicer_group_id = #{servicerGroupId}
+				</if>
+			</trim>
+		</where>
+		order by
+			tbl1.servicer_id
+		,	tbl1.servicer_group_id
+		;
+	</select>	
+	
+	<select id="getLatestUpdateTime" resultType="java.time.LocalDateTime">
+		select 
+			max(tbl1.update_time)
+		from
+			api_user_group tbl1
+		where
+			tbl1.servicer_group_id = #{servicerGroupId}
+		;
+	</select>
+	
+	<select id="getSequence" resultType="String">
+		select
+			lpad(cast(nextval('servicer_group_id_seq') as character varying), 5, '0')
+		;
+	</select>
+	
+	<insert id="registerData"> 
+		insert into
+			api_user_group
+			(
+				servicer_group_id 
+			,	servicer_group_name
+			,	servicer_id
+			,	overview
+			,	update_time
+			)
+		values 
+			<foreach collection="apiGroupsEntityList" item="entity" separator=",">
+				(
+					#{entity.servicerGroupId}
+				,	#{entity.servicerGroupName}
+				,	#{entity.servicerId}
+				,	#{entity.overview}
+				, 	now()
+				)
+			</foreach>
+		;
+	</insert>
+	
+	<insert id="registerDataWithUpdateTime"> 
+		insert into
+			api_user_group
+			(
+				servicer_group_id 
+			,	servicer_group_name
+			,	servicer_id
+			,	overview
+			,	update_time
+			)
+		values 
+			<foreach collection="apiGroupsEntityList" item="entity" separator=",">
+				(
+					#{entity.servicerGroupId}
+				,	#{entity.servicerGroupName}
+				,	#{entity.servicerId}
+				,	#{entity.overview}
+				,	#{entity.updateTime}::timestamp
+				)
+			</foreach>
+		;
+	</insert>
+	
+	<delete id="deleteData">
+		delete from
+			api_user_group tbl1
+		where
+			tbl1.servicer_group_id = #{servicerGroupId}
+		;
+	</delete>
+
+	<delete id="deleteDataWithUpdateTime">
+		delete from
+			api_user_group tbl1
+		where
+			tbl1.servicer_group_id = #{servicerGroupId}
+		and
+			tbl1.update_time &lt;= #{updateTime}
+		;
+	</delete>
+	
+	<select id="countByServicerId" resultType="int"> 
+		select 
+			count(*) 
+		from
+			servicer_mst mst1 
+		where
+			mst1.servicer_Id 
+		in
+			<foreach collection="servicerIdList" item="servicerId" open="(" separator="," close=")">
+				#{servicerId}
+			</foreach>
+		;
+	</select>
+	
+	<select id="countByServicerGroupId" resultType="int">
+		select 
+			count(*)
+		from
+			api_user_group tbl1
+		where
+			tbl1.servicer_group_id = #{servicerGroupId}
+		;
+	</select>
+
+</mapper>
